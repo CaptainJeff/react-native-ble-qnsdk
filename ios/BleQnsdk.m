@@ -7,11 +7,18 @@ RCT_EXTERN_METHOD(buildUser:(NSString *)name birthday:(NSString *)birthday heigh
 RCT_EXTERN_METHOD(onStartDiscovery:(NSString *)name resolver:(RCTPromiseResolveBlock)resolve
     rejecter: (RCTPromiseRejectBlock)reject)
     RCT_EXTERN_METHOD(onStopDiscovery)
+
+- (dispatch_queue_t)methodQueue
+{
+    return dispatch_get_main_queue();
+}
+
++ (BOOL)requiresMainQueueSetup
+{
+    return YES;
+}
+
 @end
 
 @interface QNSDKManager (RCTExternModule) <RCTBridgeModule>
 @end
-
-@implementation QNSDKManager (RCTExternModule)
-@end
-

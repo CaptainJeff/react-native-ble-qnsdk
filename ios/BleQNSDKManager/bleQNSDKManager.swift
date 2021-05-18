@@ -25,7 +25,7 @@ public class QNSDKManager : RCTEventEmitter {
         super.init()
         bleApi = QNBleApi.shared()
         let file = Bundle.main.path(forResource: "123456789", ofType: "qn")
-        bleApi.initSdk("123456789", firstDataFile: file, callback: { error in })
+        bleApi.initSdk("Lexington202004", firstDataFile: file, callback: { error in })
         
         bleApi.discoveryListener = self
         bleApi.connectionChangeListener = self
@@ -226,6 +226,12 @@ extension QNSDKManager: QNScaleDataListener {
     public func onScaleStateChange(_ device: QNBleDevice!, scaleState state: QNScaleState) {
         if (state.rawValue == -1) {
             print("onScaleStateChange -- QNScaleStateLinkLoss")
+            print("onScaleStateChange -- DISCONNECT???")
+            let errorObject: [String: Any] = [
+                "status": "disconnected"
+            ]
+        
+            self.sendEvent(withName: "uploadProgress", body: errorObject )
         }
         else if (state.rawValue == 0){
             print("onScaleStateChange - QNScaleStateDisconnected")

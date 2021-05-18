@@ -26,34 +26,35 @@ import com.facebook.react.uimanager.IllegalViewOperationException;
 import com.coachcare.User;
 
 import com.qingniu.qnble.utils.QNLogUtils;
-import com.yolanda.health.qnblesdk.constant.QNUnit;
-import com.yolanda.health.qnblesdk.listener.QNBleConnectionChangeListener;
-import com.yolanda.health.qnblesdk.listener.QNScaleDataListener;
-import com.yolanda.health.qnblesdk.listener.QNResultCallback;
-import com.yolanda.health.qnblesdk.out.QNBleApi;
-import com.yolanda.health.qnblesdk.constant.CheckStatus;
-import com.yolanda.health.qnblesdk.constant.QNIndicator;
-import com.yolanda.health.qnblesdk.constant.UserGoal;
-import com.yolanda.health.qnblesdk.constant.UserShape;
-import com.yolanda.health.qnblesdk.listener.QNBleDeviceDiscoveryListener;
-import com.yolanda.health.qnblesdk.listener.QNResultCallback;
-import com.yolanda.health.qnblesdk.out.QNBleApi;
-import com.yolanda.health.qnblesdk.out.QNBleBroadcastDevice;
-import com.yolanda.health.qnblesdk.out.QNBleDevice;
-import com.yolanda.health.qnblesdk.out.QNBleKitchenDevice;
-import com.yolanda.health.qnblesdk.out.QNConfig;
-import com.yolanda.health.qnblesdk.out.QNScaleData;
-import com.yolanda.health.qnblesdk.out.QNScaleItemData;
-import com.yolanda.health.qnblesdk.out.QNScaleStoreData;
-import com.yolanda.health.qnblesdk.out.QNShareData;
-import com.yolanda.health.qnblesdk.out.QNUser;
-import com.yolanda.health.qnblesdk.out.QNUtils;
-import com.yolanda.health.qnblesdk.out.QNWiFiConfig;
+import com.qn.device.listener.QNScaleDataListener;
+import com.qn.device.listener.QNResultCallback;
+import com.qn.device.out.QNBleApi;
+import com.qn.device.constant.CheckStatus;
+import com.qn.device.constant.QNDeviceType;
+import com.qn.device.constant.QNIndicator;
+import com.qn.device.constant.UserGoal;
+import com.qn.device.constant.UserShape;
+import com.qn.device.listener.QNBleDeviceDiscoveryListener;
+import com.qn.device.listener.QNResultCallback;
+import com.qn.device.out.QNBleApi;
+import com.qn.device.out.QNBleBroadcastDevice;
+import com.qn.device.out.QNBleDevice;
+import com.qn.device.out.QNBleKitchenDevice;
+import com.qn.device.out.QNConfig;
+import com.qn.device.out.QNScaleData;
+import com.qn.device.out.QNScaleItemData;
+import com.qn.device.out.QNScaleStoreData;
+import com.qn.device.out.QNShareData;
+import com.qn.device.out.QNUser;
+import com.qn.device.out.QNUtils;
+import com.qn.device.out.QNWiFiConfig;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import com.qn.device.listener.QNBleConnectionChangeListener;
+import com.qn.device.constant.QNScaleStatus;
 
 
 public class BleQnsdkModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
@@ -71,22 +72,18 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
 
     reactContext.addLifecycleEventListener(this);
     this.reactContext = reactContext;
+//    this.initSDK();
   }
 
   public void initialize() {
+    final ReactApplicationContext context = getReactApplicationContext();
+    mQNBleApi = QNBleApi.getInstance(context);
+    this.setConfig();
 
-    if (this.loaded == false) {
-      final ReactApplicationContext context = getReactApplicationContext();
-      mQNBleApi = QNBleApi.getInstance(context);
-      this.setConfig();
-
-      this.initSDK();
-      this.setDiscoveryListener();
-      this.setConnectionListener();
-      this.setDataListener();
-    }
-
-    this.loaded = true;
+    this.initSDK();
+    this.setDiscoveryListener();
+    this.setConnectionListener();
+    this.setDataListener();
   }
 
   public void setConfig() {
@@ -106,12 +103,13 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
 
   public void initSDK() {
     String encryptPath = "file:///android_asset/123456789.qn";
-    mQNBleApi.initSdk("123456789", encryptPath, new QNResultCallback() {
+    mQNBleApi.initSdk("Lexington202004", encryptPath, new QNResultCallback() {
       @Override
       public void onResult(int code, String msg) {
         Log.d("BaseApplication", "Initialization file\n" + msg);
       }
     });
+
   }
 
   @Override
@@ -207,18 +205,11 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
       this.mUser.setHeight(height);
       this.mUser.setUserId(id);
 
-
-      mQNBleApi.buildUser(id,
-        height, gender, formattedBirthday, athleteType, new QNResultCallback() {
-          @Override
-          public void onResult(int code, String msg) {
-            Log.w("Build User", "Build User message:" + msg);
-          }
-        });
+      this.createQNUser();
 
       QNConfig mQnConfig = mQNBleApi.getConfig();
       mQnConfig.setUnit(unit);
-
+      Log.d("BaseApplication", "buildUser file\n");
       promise.resolve("build user success");
     } catch (IllegalViewOperationException | ParseException e) {
       promise.reject("build user reject", e);
@@ -248,38 +239,58 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
     }
   }
 
-  public void setConnectionListener() {
-    final ReactApplicationContext context = getReactApplicationContext();
+  private void setBleStatus(int bleStatus) {
+    String stateString;
+    String btnString;
+
+
+  }
+
+  private void setConnectionListener() {
     mQNBleApi.setBleConnectionChangeListener(new QNBleConnectionChangeListener() {
+      //正在连接
       @Override
       public void onConnecting(QNBleDevice device) {
+        setBleStatus(QNScaleStatus.STATE_CONNECTING);
       }
 
+      //已连接
       @Override
       public void onConnected(QNBleDevice device) {
+        setBleStatus(QNScaleStatus.STATE_CONNECTED);
       }
 
       @Override
       public void onServiceSearchComplete(QNBleDevice device) {
+
       }
 
-      //The connection is being disconnected. When the disconnection is called, it will be called back immediately.
+      //正在断开连接，调用断开连接时，会马上回调
       @Override
       public void onDisconnecting(QNBleDevice device) {
+        setBleStatus(QNScaleStatus.STATE_DISCONNECTING);
       }
 
-      //Disconnect, callback after disconnect
+      // 断开连接，断开连接后回调
       @Override
       public void onDisconnected(QNBleDevice device) {
+        WritableMap params = Arguments.createMap();
+        params.putString("status", "disconnected");
+        sendEventToJS("uploadProgress", params);
+        setBleStatus(QNScaleStatus.STATE_DISCONNECTED);
       }
 
-      //There was a connection error, please refer to the attached table for the error code
+      //出现了连接错误，错误码参考附表
       @Override
       public void onConnectError(QNBleDevice device, int errorCode) {
+        Log.d("ConnectActivity", "onConnectError:" + errorCode);
+        WritableMap params = Arguments.createMap();
+        params.putString("status", "error");
+        sendEventToJS("uploadProgress", params);
+        setBleStatus(QNScaleStatus.STATE_DISCONNECTED);
       }
     });
-
-  };
+  }
 
   public void sendEventToJS(String eventName, @Nullable WritableMap params) {
     this.reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(eventName, params);
@@ -291,30 +302,43 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
       public double convertWeight(Double weight) {
         try {
           double finalWeight = weight * 1000;
-          if (mQNBleApi.getConfig().getUnit() == QNUnit.WEIGHT_UNIT_LB) {
-            String convertedWeightAsString = mQNBleApi.convertWeightWithTargetUnit(weight,QNUnit.WEIGHT_UNIT_LB);
+          int unit = mQNBleApi.getConfig().getUnit();
+
+          if (unit == 0) {
+            return finalWeight;
+          } else {
+            String convertedWeightAsString = mQNBleApi.convertWeightWithTargetUnit(weight,unit);
             double pounds = Float.valueOf(convertedWeightAsString.split("lb")[0]);
             double convertedWeight = 453.59237 * pounds;
             finalWeight = convertedWeight;
+            return finalWeight;
           }
-
-          return finalWeight;
         } catch(IllegalViewOperationException e) {
           return weight;
         }
-
       };
 
       @Override
       public void onGetUnsteadyWeight(QNBleDevice device, double weight) {
+        Log.d("Drakos", "onGetUnsteadyWeight ");
         QNConfig mQnConfig = mQNBleApi.getConfig();
         double finalWeight = convertWeight(weight);
 
         WritableMap params = Arguments.createMap();
         params.putDouble("weight", finalWeight);
         params.putString("status", "sync");
-        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("uploadProgress", params);
+        sendEventToJS("uploadProgress", params);
       }
+
+//      @Override
+//      public void onGetScaleData(QNBleDevice qnBleDevice, QNScaleData qnScaleData) {
+//
+//      }
+
+//      @Override
+//      public void onGetStoredScale(QNBleDevice qnBleDevice, List<QNScaleStoreData> list) {
+//
+//      }
 
       @Override
       public void onGetScaleData(QNBleDevice device, QNScaleData data) {
@@ -360,7 +384,7 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
           params.putDouble("waterPercentage", value);
         }
 
-        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("uploadProgress", params);
+        sendEventToJS("uploadProgress", params);
       }
 
       @Override
@@ -383,12 +407,15 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
 
 
   public void setDiscoveryListener() {
+    Log.d("Drakos", "setDiscoveryListener 1");
     mQNBleApi.setBleDeviceDiscoveryListener(new QNBleDeviceDiscoveryListener() {
       @Override
       public void onDeviceDiscover(QNBleDevice device) {
+        Log.d("Drakos", "setDiscoveryListener 2");
         mQNBleApi.connectDevice(device, createQNUser(), new QNResultCallback() {
           @Override
           public void onResult(int code, String msg) {
+            Log.d("Drakos", "setDiscoveryListener 3");
             Log.d("onResult", "afdasf:" + msg);
           }
         });
@@ -397,15 +424,18 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
 
       @Override
       public void onStartScan() {
+        Log.d("Drakos", "onStartScan");
 //        QNLogUtils.log("ScanActivity", "onStartScan");
 //        isScanning = true;
       }
 
       @Override
       public void onStopScan() {
+        Log.d("Drakos", "onStopScan");
         mQNBleApi.stopBleDeviceDiscovery(new QNResultCallback() {
           @Override
           public void onResult(int code, String msg) {
+            Log.d("Drakos", "onStopScan2 " + code);
             if (code == CheckStatus.OK.getCode()) {
             }
           }
@@ -434,7 +464,7 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
   public void onStartDiscovery(String name, final Promise promise) {
     Activity activity = getCurrentActivity();
     verifyPermissions(activity);
-
+    Log.d("Drakos", "onStartDiscovery 1 ");
     Handler mHandler = new Handler();
     mHandler.post(new Runnable() {
 
@@ -443,6 +473,7 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
         mQNBleApi.startBleDeviceDiscovery(new QNResultCallback() {
           @Override
           public void onResult(int code, String msg) {
+            Log.d("Drakos", "onStartDiscovery 2 " + code);
             if (code != CheckStatus.OK.getCode()) {
               promise.resolve("Success scan scan: ");
             }
@@ -454,7 +485,8 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
   }
 
   @ReactMethod
-  public void stopScan(Callback callback) {
+  public void stopScan(final Callback callback) {
+    Log.d("Drakos", "stopScanstopScan ");
     mQNBleApi.stopBleDeviceDiscovery(new QNResultCallback() {
       @Override
       public void onResult(int code, String msg) {
@@ -463,7 +495,18 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
         }
       }
     });
-    // TODO: Implement some actually useful functionality
-    
+
+  }
+
+  @ReactMethod
+  public void onStopDiscovery() {
+    Log.d("Drakos", "onStopDiscovery ");
+    mQNBleApi.stopBleDeviceDiscovery(new QNResultCallback() {
+      @Override
+      public void onResult(int code, String msg) {
+
+      }
+    });
+
   }
 }
