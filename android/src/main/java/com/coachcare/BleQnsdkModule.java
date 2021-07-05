@@ -74,19 +74,14 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
   }
 
   public void initialize() {
+    final ReactApplicationContext context = getReactApplicationContext();
+    mQNBleApi = QNBleApi.getInstance(context);
+    this.setConfig();
 
-    if (this.loaded == false) {
-      final ReactApplicationContext context = getReactApplicationContext();
-      mQNBleApi = QNBleApi.getInstance(context);
-      this.setConfig();
-
-      this.initSDK();
-      this.setDiscoveryListener();
-      this.setConnectionListener();
-      this.setDataListener();
-    }
-
-    this.loaded = true;
+    this.initSDK();
+    this.setDiscoveryListener();
+    this.setConnectionListener();
+    this.setDataListener();
   }
 
   public void setConfig() {
@@ -106,7 +101,7 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
 
   public void initSDK() {
     String encryptPath = "file:///android_asset/123456789.qn";
-    mQNBleApi.initSdk("123456789", encryptPath, new QNResultCallback() {
+    mQNBleApi.initSdk("Lexington202004", encryptPath, new QNResultCallback() {
       @Override
       public void onResult(int code, String msg) {
         Log.d("BaseApplication", "Initialization file\n" + msg);
@@ -207,14 +202,7 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
       this.mUser.setHeight(height);
       this.mUser.setUserId(id);
 
-
-      mQNBleApi.buildUser(id,
-        height, gender, formattedBirthday, athleteType, new QNResultCallback() {
-          @Override
-          public void onResult(int code, String msg) {
-            Log.w("Build User", "Build User message:" + msg);
-          }
-        });
+      this.createQNUser();
 
       QNConfig mQnConfig = mQNBleApi.getConfig();
       mQnConfig.setUnit(unit);
@@ -313,7 +301,7 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
         WritableMap params = Arguments.createMap();
         params.putDouble("weight", finalWeight);
         params.putString("status", "sync");
-        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("uploadProgress", params);
+        sendEventToJS("uploadProgress", params);
       }
 
       @Override
@@ -360,7 +348,7 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
           params.putDouble("waterPercentage", value);
         }
 
-        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit("uploadProgress", params);
+        sendEventToJS("uploadProgress", params);
       }
 
       @Override
@@ -454,7 +442,7 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
   }
 
   @ReactMethod
-  public void stopScan(Callback callback) {
+  public void stopScan(final Callback callback) {
     mQNBleApi.stopBleDeviceDiscovery(new QNResultCallback() {
       @Override
       public void onResult(int code, String msg) {
@@ -463,7 +451,17 @@ public class BleQnsdkModule extends ReactContextBaseJavaModule implements Lifecy
         }
       }
     });
-    // TODO: Implement some actually useful functionality
+    
+  }
+
+  @ReactMethod
+  public void onStopDiscovery() {
+    mQNBleApi.stopBleDeviceDiscovery(new QNResultCallback() {
+      @Override
+      public void onResult(int code, String msg) {
+        
+      }
+    });
     
   }
 }
